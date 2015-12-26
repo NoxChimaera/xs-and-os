@@ -1,10 +1,21 @@
 :- pce_global(@wnd, new(dialog('Xs and Os'))).
 
+/* current player
+ * param 1 {x, o}
+ */
 ?- dynamic(player/1).
+
+/* state of board cell
+ * param 1 cell index [1..9]
+ * param 2 {x, o}
+ */
 ?- dynamic(cell/2).
 
-switchPlayer(x) :- retract(player(x)), assertz(player(o)), !.
-switchPlayer(o) :- retract(player(o)), assertz(player(x)), !.
+/* pass control to another player
+ * param 1 {x, o} current player
+ */
+passControl(x) :- retract(player(x)), assertz(player(o)), !.
+passControl(o) :- retract(player(o)), assertz(player(x)), !.
 
 init :- retractall(player(X)), assertz(player(x)), !.
 initGUI:- 
@@ -22,19 +33,33 @@ initGUI:-
   send(@layout, layout_dialog),
   send(@wnd, open).
 
-go :-
-  init, initGUI.
-  
+/* draw cross
+ * param X horizontal coordinate
+ * param Y vertical coordinate
+ * param W width
+ * param H hight
+ * param GW dialog gap width (horizontal offset)
+ * param GH dialog gap height (vertical offset)
+ */
 drawX(X, Y, W, H, GW, GH) :-
   send(@wnd, display, new(D, line(W, H)), point(X + GW, Y + GH)),
   send(D, colour(red)), 
   send(@wnd, display, new(U, line(-W, H)), point(X + W + GW, Y + GH)),
   send(U, colour(red)).
   
+/* draw nought
+ * param X horizontal coordinate
+ * param Y vertical coordinate
+ * param W width
+ * param H hight
+ * param GW dialog gap width (horizontal offset)
+ * param GH dialog gap height (vertical offset)
+ */
 drawO(X, Y, W, H, GW, GH) :-
   send(@wnd, display, new(O, ellipse(W, H)), point(X + GW, Y + GH)),
   send(O, colour(blue)).
-  
+
+% win lines
 line(1, 2, 3).
 line(1, 4, 7).
 line(1, 5, 9).
@@ -44,9 +69,15 @@ line(4, 5, 6).
 line(7, 5, 3).
 line(7, 8, 9).
   
+/* check if player is a winner
+ * param P player
+ */
 win(P) :-
   line(A, B, C), cell(A, P), cell(B, P), cell(C, P), write_ln(P), !. 
 
+/* show win message and reset the game
+ * param P winner
+ */
 showWinMessage(P) :-
   new(D, dialog('Fin!')),
   send(D, append, text('Winner: ')),
@@ -54,13 +85,18 @@ showWinMessage(P) :-
   send(D, append, button(ok, and(message(D, destroy), and(message(@wnd, destroy)), message(@prolog, restart))), below),
   send(D, open).
   
-restart :-
+% reset the game
+reset :-
   retractall(cell(_, _)),
   free(@b1), free(@b2), free(@b3), 
   free(@b4), free(@b5), free(@b6), 
   free(@b7), free(@b8), free(@b9), 
   free(@layout).
-  
+
+/* handle player's move
+ * param C clicked cell
+ * param I cell index
+ */  
 move(C, I) :- 
   get(C, x, X), get(C, y, Y), 
   get(C, size, size(W, H)), get(@wnd, gap, size(GW, GH)),
@@ -74,5 +110,8 @@ move(C, I) :-
       assertz(cell(I, o))
   ), 
   player(P), 
-  ( win(P) -> showWinMessage(P) ; switchPlayer(_) ), !.
+  ( win(P) -> showWinMessage(P) ; passControl(_) ), !.
  
+% start
+go :-
+  init, initGUI.
