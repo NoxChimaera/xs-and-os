@@ -82,7 +82,7 @@ showWinMessage(P) :-
   new(D, dialog('Fin!')),
   send(D, append, text('Winner: ')),
   send(D, append, text(P), right),
-  send(D, append, button(ok, and(message(D, destroy), and(message(@wnd, destroy)), message(@prolog, restart))), below),
+  send(D, append, button(ok, and(message(D, destroy), and(message(@wnd, destroy)), message(@prolog, reset))), below),
   send(D, open).
   
 % reset the game
